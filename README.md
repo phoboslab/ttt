@@ -19,7 +19,7 @@ add them to your HTML.
 
 ```js
 // Example texture 32x32 pixels with a pink background
-ttt([32, 32, 0xf0ff]).map(canvas => document.body.appendChild(canvas));
+ttt([[32, 32, 0xf0ff]]).map(canvas => document.body.appendChild(canvas));
 ```
 
 
