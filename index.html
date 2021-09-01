@@ -640,7 +640,7 @@ class TTTE {
 			clearTimeout(this.append_undo_stack_timeout);
 				this.append_undo_stack_timeout = setTimeout(()=> {
 				this.undo_position = this.undo_stack.length;
-		this.undo_stack.push(def_string);	
+				this.undo_stack.push(def_string);	
 			}, 1000);
 		}
 	}
