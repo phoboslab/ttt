@@ -278,7 +278,7 @@ class TTTE {
 		this.setZoom(3);
 
 		if (window.location.hash.length > 8) {
-			this.parse(decodeURI(window.location.hash.substr(1)));
+			this.parse(atob(window.location.hash.substr(1)));
 		}
 	}
 
@@ -605,7 +605,7 @@ class TTTE {
 		}
 		let def_string = JSON.stringify(defs);
 		this.$('#result').value = def_string;
-		this.$('#share').href = '#'+def_string;
+		this.$('#share').href = '#'+btoa(def_string);
 		this.$('#num-bytes').textContent = def_string.length;
 
 		
