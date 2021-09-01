@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>TTT – Tiny Texture Tumbler</title>
+	<style>
+		* {
+			box-sizing: border-box;
+			font-family: sans-serif;
+			font-size: 12px;
+		}
+
+		html, body{
+			margin: 0;
+			padding: 0;
+			background: #111;
+			color: #fff;
+			height: 100%;
+		}
+
+		a, .action{
+			color: #D19;
+			text-decoration: none;
+			cursor: pointer;
+			font-weight: bold;
+			user-select: none;
+		}
+
+		a:hover, .action:hover{
+			color:#fff
+		}
+
+		input, select {
+			background: #444;
+			color: #fff;
+			border: 0;
+			padding: 8px;
+			min-width: 0;
+			margin:0 8px 0 0;
+		}
+
+		input[type=color] {
+			padding: 0;
+			width: 32px;
+			height: 32px;
+		}
+
+		input[type=number] {
+			width: 80px;
+		}
+
+		label{
+			padding: 8px 0;
+			font-weight:bold;
+		}
+
+		canvas {
+			image-rendering: pixelated;
+			image-rendering: crisp-edges;
+		}
+
+		.panel {
+			background: #222;
+			padding:4px;
+			margin: 4px;
+		}
+
+		.flex-h {
+			display:flex;
+		}
+
+		.flex-grow {
+			flex-grow: 1;
+		}
+
+		.row{
+			display:flex;
+			margin:8px 0;
+		}
+
+
+
+		#editor {
+			display: flex;
+			flex-direction: column;
+			height: 100%;
+		}
+
+		#result {
+			font-family: monospace;
+		}
+
+		#main {
+			display: flex;
+			flex: 1 1 auto;
+			overflow-y: hidden;
+		}
+
+		#canvas-container {
+			overflow: hidden;
+			position: relative;
+		}
+
+		#canvas {
+			display: block;
+			position: absolute;
+			left: 0;
+			right: 0;
+			top: 0;
+			bottom: 0;
+			margin: auto;
+		}
+
+		#settings{
+			width:300px;
+			display: flex;
+			flex-direction: column;
+		}
+
+		#steps-container {
+			flex-grow: 1;
+			overflow-y: auto;
+		}
+
+		.step {
+			position: relative;
+			border-top: 1px dashed #ccc;
+			margin-top: 16px;
+			padding-top: 8px;
+		}
+		.step-button {
+			float: right;
+			padding: 0 4px 4px 4px;
+		}
+		
+		.zoom {
+			display: inline-block;
+			text-align: center;
+			font-size: 24px;
+			width: 30px;
+			height: 30px;
+		}
+
+		.undo {
+			font-size: 24px;
+			padding: 0 12px;
+		}
+
+		#texture-collection {
+			height: 148px;
+			overflow-y: auto;
+		}
+
+		#texture-collection div {
+			border: 1px dashed transparent;
+		}
+
+		#texture-collection div.active {
+			border: 1px dashed #fff;
+		}
+
+		#texture-collection canvas {
+			width: 100%;
+			height: auto;
+		}
+
+		#texture-collection > div {
+			cursor: pointer;
+			position: relative;
+			width: 128px;
+			float: left;
+			margin: 8px;
+		}
+
+		.texture-collection-button {
+			position: absolute;
+			z-index: 100;
+			top: 0;
+			left: 0;
+			padding: 4px;
+			background: rgba(0,0,0,0.5);
+		}
+
+		.texture-collection-button:last-child {
+			left: auto;
+			right: 0;
+		}
+	</style>
+</head>
+<body>
+
+<div id="editor">
+	<div class="panel">
+		<label>
+			TTT – Tiny Texture Tumbler – <a href="https://github.com/phoboslab/ttt">github.com/phoboslab/ttt</a>
+		</label>
+	</div>
+	<div id="menu" class="panel">
+		<div class="flex-h">
+			<input type="text" id="result" class="flex-grow" 
+				placeholder="Paste your TTT data here" oninput="ttte.parseUserInput()"/>
+			<label><a href="#" id="share" target="_blank">share</a></label>
+			<label class="action undo" title="Undo" onclick="ttte.undo()">‹</label>
+			<label class="action undo" title="Redo" onclick="ttte.redo()">›</label>
+			<label><span id="num-bytes">0</span> bytes</label>
+		</div>
+	</div>
+	<div class="flex-h" id="main">
+		<div id="canvas-container" class="panel flex-grow">
+			<span class="action zoom" title="Zoom in" onclick="ttte.zoomIn()">+</span>
+			<span class="action zoom" title="Zoom out" onclick="ttte.zoomOut()">-</span>
+			<canvas id="canvas" class="main-canvas"></canvas>
+		</div>
+
+		<div id="settings" class="panel">
+			<label>TEXTURE SETTINGS</label>
+			<div class="row">
+				<input class="def" type="number" value="32"/>
+				<input class="def" type="number" value="32"/>
+				<label>width/height</label>
+			</div>
+			<div class="row def color">
+				<input type="color" value="#cccccc"/>
+				<input type="number" value="15" min="0", max="15"/>
+				<label>color</label>
+			</div>
+		
+			<label>STEPS</label>
+			<div id="steps-container">
+				<div id="steps">
+				</div>
+			</div>
+			<div>
+				<select id="operations-select" onchange="ttte.addStep()">
+					<option value="-1" selected disabled hidden>+ step</option>
+				</select>
+			</div>
+		</div>
+	</div>
+	<div id="texture-collection-container" class="panel">
+		<span class="action" onclick="ttte.addTexture()">+ texture</span>
+		<div id="texture-collection">
+		</div>
+	</div>
+</div>
+
+<script type="text/javascript" src="ttt.js"></script>
+<script type="text/javascript">
+
+class TTTE {
+	constructor() {
+		this.undo_stack = ['[[32,32,13119]]'];
+		this.undo_position = 0;
+		this.append_to_undo_stack = true;
+		this.append_undo_stack_timeout = 0;
+
+		let op_id = 0;
+		for (let op in TTTE.Operations) {
+			let option = document.createElement('option');
+			option.value = op_id++;
+			option.textContent = op;
+			this.$('#operations-select').appendChild(option);
+		}
+
+		let inputs = this.$$('#settings input,select');
+		for (let input of inputs) {
+			input.addEventListener('input', (ev) => this.update());
+		}
+
+		this.textures = [];
+
+		// Add a first texture if we don't have any from parse()
+		if (!this.textures.length) {
+			this.addTexture();
+		}
+
+		this.zoom = 1;
+		this.setZoom(3);
+
+		if (window.location.hash.length > 8) {
+			this.parse(decodeURI(window.location.hash.substr(1)));
+		}
+	}
+
+	addTexture() {
+		let inputs = this.$$('.def');
+
+		let div = document.createElement('div');
+		let texture = {
+			div: div,
+			def: [
+				parseInt(inputs[0].value), // width
+				parseInt(inputs[1].value),  // height
+				0x333f // color
+			]
+		};
+		
+		
+		let preview_canvas = document.createElement('canvas');
+		preview_canvas.addEventListener('click', (ev) => this.setTexture(texture));
+		div.appendChild(preview_canvas);
+
+		let copy_button = document.createElement('div');
+		copy_button.classList.add('texture-collection-button', 'action');
+		copy_button.textContent = 'copy';
+		copy_button.addEventListener('click', (ev) => this.copyTexture(texture));
+		div.appendChild(copy_button);
+
+		let delete_button = document.createElement('div');
+		delete_button.classList.add('texture-collection-button', 'action');
+		delete_button.textContent = '×';
+		delete_button.addEventListener('click', (ev) => this.deleteTexture(texture));
+		div.appendChild(delete_button);
+
+
+		this.$('#texture-collection').appendChild(div);
+
+		this.textures.push(texture);
+		this.setTexture(texture);
+		this.update();
+	}
+
+	setTexture(texture) {
+		let divs = this.$$('#texture-collection div');
+		for (let div of divs) {
+			div.classList.remove('active');
+		}
+		texture.div.classList.add('active');
+
+		this.current_texture = texture;
+		this.setTextureDef(texture.def);
+	}
+
+	setTextureDef(def) {
+		this.$('#steps').innerHTML = '';
+		let i = 0;
+		let inputs = this.$$('.def');
+		inputs[0].value = def[i++];
+		inputs[1].value = def[i++];
+		this.setColorInput(inputs[2], def[i++]);
+
+		while (i < def.length) {
+			this.addStepWithId(def[i++]);
+			inputs = this.$$('.def');
+
+			for (i; i < inputs.length; i++) {
+				if (inputs[i].classList.contains('color')) {
+					this.setColorInput(inputs[i], def[i]);
+				}
+				else {
+					inputs[i].value = def[i];
+				}
+			}
+		}
+		this.update();
+	}
+
+	setColorInput(container, c) {
+		this.$$('input', container)[0].value = '#' +(
+			((((c>>12)&15)*17) << 16) + 
+			((((c>>8)&15)*17) << 8) + 
+			((((c>>4)&15)*17))
+		).toString(16).padStart(6, '0');
+		this.$$('input', container)[1].value = (c&15);
+	}
+
+	copyTexture(texture) {
+		this.addTexture();
+		this.setTextureDef(texture.def);
+		this.update();
+	}
+
+	deleteTexture(texture) {
+		this.textures.splice(this.textures.indexOf(texture), 1);
+		texture.div.remove();
+
+		if (!this.textures.length) {
+			this.addTexture();
+		}
+		else if (this.current_texture == texture) {
+			this.setTexture(this.textures[0]);
+		}
+		this.update();
+	}
+
+	addStep() {
+		let op_id = this.$('#operations-select').value;
+		this.addStepWithId(op_id);
+		this.update();
+
+		this.$('#operations-select').value = -1;
+	}
+
+	addStepWithId(op_id) {
+		let op_name = Object.keys(TTTE.Operations)[op_id];
+		let op = TTTE.Operations[op_name];
+
+		let div = document.createElement('div');
+		
+		let label = document.createElement('label');
+		label.textContent = op_name;
+		div.appendChild(label);
+		div.classList.add('step');
+
+		let delete_button = document.createElement('div');
+		delete_button.classList.add('action', 'step-button', 'step-delete');
+		delete_button.textContent = '×';
+		delete_button.title = 'delete step';
+		delete_button.addEventListener('click', (ev) => this.deleteStep(div));
+		div.appendChild(delete_button);
+
+		let move_down_button = document.createElement('div');
+		move_down_button.classList.add('action', 'step-button', 'step-delete');
+		move_down_button.textContent = '▼';
+		move_down_button.title = 'move step down';
+		move_down_button.addEventListener('click', (ev) => this.moveStep(div, 1));
+		div.appendChild(move_down_button);
+		
+		let move_up_button = document.createElement('div');
+		move_up_button.classList.add('action', 'step-button', 'step-delete');
+		move_up_button.textContent = '▲';
+		move_up_button.title = 'move step up';
+		move_up_button.addEventListener('click', (ev) => this.moveStep(div, -1));
+		div.appendChild(move_up_button);
+
+		let op_input = document.createElement('input');
+		op_input.type = 'hidden';
+		op_input.value = op_id;
+		op_input.classList.add('def');
+		div.appendChild(op_input);
+
+		for (let param_name in op) {
+			this.addStepParams(div, param_name, op[param_name]);
+		}
+
+		let inputs = this.$$('input,select', div);
+		for (let input of inputs) {
+			input.addEventListener('input', (ev) => this.update());
+		}
+
+		this.$('#steps').appendChild(div);
+	}
+
+	addStepParams(div, param_name, values) {
+		let row = document.createElement('div');
+		row.classList.add('row');
+
+		if (!Array.isArray(values)) {
+			values = [values];
+		}
+
+		for (let value of values) {
+			if (value.type === 'number' || value.type === 'text') {
+				let setting = document.createElement('input');
+				setting.type = value.type;
+				setting.value = value.value;
+				setting.classList.add('def');
+				if (value.type === 'number') {
+					setting.min = value.min;
+					setting.max = value.max;
+				}
+				row.appendChild(setting);
+			}
+			else if (value.type === 'array') {
+				let setting = document.createElement('select');
+				for (let i = 0; i < value.def.length; i++) {
+					let option = document.createElement('option');
+					option.textContent = value.def[i];
+					option.value = i;
+					setting.appendChild(option);
+				}
+				setting.value = value.value;
+				setting.classList.add('def');
+				row.appendChild(setting);
+			}
+			else if (value.type === 'color') {
+				let color = document.createElement('input');
+				color.type = 'color';
+				color.value = value.color;
+
+				let alpha = document.createElement('input');
+				alpha.type = 'number';
+				alpha.value = value.alpha;
+				alpha.min = 0;
+				alpha.max = 15;
+
+				row.classList.add('def');
+				row.classList.add('color');
+				row.appendChild(color);
+				row.appendChild(alpha);
+			}
+		}
+
+		let value_label = document.createElement('label');
+		value_label.textContent = param_name;
+		row.appendChild(value_label);
+		div.appendChild(row);
+	}
+
+	moveStep(div, dir) {
+		if (dir === -1) {
+			if (div.previousSibling) {
+				div.parentNode.insertBefore(div, div.previousSibling);
+			}
+		}
+		else {
+			if (div.nextSibling && div.nextSibling.nextSibling) {
+				div.parentNode.insertBefore(div, div.nextSibling.nextSibling);
+			}
+			else if (div.nextSibling) {
+				div.parentNode.appendChild(div);
+			}
+		}
+		this.update();
+	}
+
+	deleteStep(div) {
+		div.remove();
+		this.update();
+	}
+
+	zoomIn() {
+		this.setZoom(Math.min(16, this.zoom * 2));
+	}
+
+	zoomOut() {
+		this.setZoom(Math.max(1, this.zoom * 0.5));
+	}
+
+	setZoom(zoom) {
+		this.zoom = zoom;
+		let canvas = this.$('#canvas');
+		canvas.style.width = (canvas.width * this.zoom) + 'px';
+		canvas.style.height = (canvas.height * this.zoom) + 'px';
+	}
+
+	undo() {
+		if (this.undo_position == 0) {
+			return;
+		}
+		
+		this.undo_position--;
+		this.parse(this.undo_stack[this.undo_position]);
+	}
+
+	redo() {
+		if (this.undo_position == this.undo_stack.length-1) {
+			return;
+		}
+		
+		this.undo_position++;
+		this.parse(this.undo_stack[this.undo_position]);
+	}
+
+	parse(json) {
+		let defs = JSON.parse(json);
+		
+		this.append_to_undo_stack = false;
+
+		// Delete all textures
+		this.$('#texture-collection').innerHTML = '';
+		this.textures = [];
+
+		// ... and recreate them!
+		for (let def of defs) {
+			this.addTexture();
+			this.setTextureDef(def);
+		}
+
+		this.append_to_undo_stack = true;
+	}
+
+	parseUserInput() {
+		this.parse(this.$('#result').value);
+	}
+
+	update() {
+		// Update the texture def
+		this.current_texture.def = this.$$('.def').map((e) => {
+			if (e.classList.contains('color')) {
+				let color = this.$$('input', e)[0].value;
+				let alpha = this.$$('input', e)[1].value;
+				if (alpha == '0') {
+					return 0;
+				}
+				return (
+					(Math.round(parseInt(color.substr(1, 2),16)>>4) << 12) +
+					(Math.round(parseInt(color.substr(3, 2),16)>>4) << 8) +
+					(Math.round(parseInt(color.substr(5, 2),16)>>4) << 4) +
+					(Math.round(parseInt(alpha)))
+				);
+			}
+			else if (e.type === 'text') {
+				return e.value;
+			}
+			else {
+				return parseFloat(e.value);
+			}
+		});
+
+		// Update all defs
+		let defs = [];
+		for (let t in this.textures) {
+			defs.push(this.textures[t].def);
+		}
+		let def_string = JSON.stringify(defs);
+		this.$('#result').value = def_string;
+		this.$('#share').href = '#'+def_string;
+		this.$('#num-bytes').textContent = def_string.length;
+
+		
+		// Render
+		let rendered = ttt(defs, this.textures.indexOf(this.current_texture))[0];
+
+		// Draw into main canvas
+		let main_canvas = this.$('#canvas');
+		main_canvas.width = rendered.width;
+		main_canvas.height = rendered.height;
+		let main_ctx = main_canvas.getContext('2d');
+		main_ctx.drawImage(rendered, 0, 0);
+		
+		// Draw into preview
+		let preview_canvas = this.$('canvas', this.current_texture.div);
+		preview_canvas.width = rendered.width;
+		preview_canvas.height = rendered.height;
+		let preview_ctx = preview_canvas.getContext('2d');
+		preview_ctx.drawImage(rendered, 0, 0);
+
+		this.setZoom(this.zoom);
+
+
+		if (
+			this.append_to_undo_stack &&
+			(
+				!this.undo_stack.length || 
+				this.undo_stack[this.undo_stack.length-1] !== def_string
+			)
+		) {
+			// Only add an entry to the undo stack at most every 5 seconds
+			clearTimeout(this.append_undo_stack_timeout);
+				this.append_undo_stack_timeout = setTimeout(()=> {
+				this.undo_position = this.undo_stack.length;
+		this.undo_stack.push(def_string);	
+			}, 1000);
+		}
+	}
+
+	$(selector, context) {
+		return (context||document).querySelector(selector);
+	}
+
+	$$(selector, context) {
+		return [...(context||document).querySelectorAll(selector)];
+	}
+};
+
+TTTE.Number = (value, min=-Infinity, max=Infinity) => ({type: 'number', value, min, max});
+TTTE.Color = (color, alpha) => ({type: 'color', color, alpha});
+TTTE.Array = (def, value) => ({type: 'array', def, value});
+TTTE.Text = (value) => ({type: 'text', value});
+
+TTTE.Operations = {
+	// 0
+	"Rectangle w. inset/emboss": {
+		"x/y": [
+			TTTE.Number(0),
+			TTTE.Number(0),
+		],
+		"width/height": [
+			TTTE.Number(16),
+			TTTE.Number(16),
+		],
+		"top color": TTTE.Color('#ffffff', 8),
+		"bottom color": TTTE.Color('#000000', 8),
+		"fill color": TTTE.Color('#cccccc', 15),
+	},
+	// 1
+	"Grid w. inset/emboss": {
+		"start x/y": [
+			TTTE.Number(0),
+			TTTE.Number(0),
+		],
+		"width/height": [
+			TTTE.Number(4),
+			TTTE.Number(4),
+		],
+		"inc x/y": [
+			TTTE.Number(6 ,1),
+			TTTE.Number(6, 1),
+		],
+		"top color": TTTE.Color('#ffffff', 8),
+		"bottom color": TTTE.Color('#000000', 8),
+		"fill color": TTTE.Color('#cccccc', 15),
+	},
+	// 2
+	"Noise": {
+		"color": TTTE.Color('#cccccc', 4),
+		"size": TTTE.Number(1, 1)
+	},
+	// 3
+	"Text": {
+		"x/y": [
+			TTTE.Number(0),
+			TTTE.Number(10),
+		],
+		color: TTTE.Color('#ffffff', 15),
+		"font/size": [
+			TTTE.Array(['sans-serif', 'serif'], 0),
+			TTTE.Number(12),
+		],
+		text: TTTE.Text('HI!'),
+	},
+	// 4
+	"Draw previous texture": {
+		"texture index": TTTE.Number(0, 0),
+		"x/y": [
+			TTTE.Number(0),
+			TTTE.Number(0),
+		],
+		"width/height": [
+			TTTE.Number(32),
+			TTTE.Number(32),
+		],
+		"alpha": TTTE.Number(15, 0, 15),
+	},
+};
+
+let ttte = new TTTE();
+</script>
+
+
+
+</body>
+</html>
