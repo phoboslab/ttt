@@ -268,17 +268,16 @@ class TTTE {
 		}
 
 		this.textures = [];
-
-		// Add a first texture if we don't have any from parse()
-		if (!this.textures.length) {
-			this.addTexture();
-		}
-
+		
 		this.zoom = 1;
 		this.setZoom(3);
 
 		if (window.location.hash.length > 8) {
 			this.parse(atob(window.location.hash.substr(1)));
+
+		// Add a first texture if we don't have any from parse()
+		if (!this.textures.length) {
+			this.addTexture();
 		}
 	}
 
