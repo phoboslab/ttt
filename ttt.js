@@ -92,8 +92,8 @@ ttt=(td, only_this_index=-1,stack_depth=0) => {
 				(texture_index, x, y, w, h, alpha) => {
 					c.globalAlpha = alpha/15;
 					(
-						texture_index < td.length && stack_depth++ < 16 &&
-						c.drawImage(ttt(td, texture_index, stack_depth)[0], x, y, w, h)
+						texture_index < td.length && stack_depth < 16 &&
+						c.drawImage(ttt(td, texture_index, stack_depth+1)[0], x, y, w, h)
 					);
 					c.globalAlpha = 1;
 				}
