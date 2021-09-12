@@ -273,7 +273,9 @@ class TTTE {
 		this.setZoom(3);
 
 		if (window.location.hash.length > 8) {
-			this.parse(atob(window.location.hash.substr(1)));
+			let input = window.location.hash.substr(1);
+			let def_string = decodeURIComponent(escape(window.atob(input)));			
+			this.parse(def_string);
 		}
 
 		// Add a first texture if we don't have any from parse()
@@ -605,7 +607,7 @@ class TTTE {
 		}
 		let def_string = JSON.stringify(defs);
 		this.$('#result').value = def_string;
-		this.$('#share').href = '#'+btoa(def_string);
+		this.$('#share').href = '#'+btoa(unescape(encodeURIComponent(def_string)));
 		this.$('#num-bytes').textContent = def_string.length;
 
 		
