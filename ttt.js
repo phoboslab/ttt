@@ -29,13 +29,8 @@ ttt=(td, only_this_index=-1,stack_depth=0) => {
 		let i = 0,
 			e = document.createElement('canvas'),
 			c = e.getContext('2d'),
-			rgba_from_2byte = (c) => 
-				'rgba(' + [
-					((c>>12)&15) * 17,
-					((c>>8)&15) * 17, 
-					((c>>4)&15) * 17,
-					(c&15)/15
-				].join() + ')',
+			rgba_from_2byte = c => 
+				("#"+(c|65536).toString(16).slice(-4)),
 			fill_rect = (x, y, w, h, ...colors) =>
 				colors.map((color, j) => {
 					c.fillStyle = rgba_from_2byte(color);
@@ -43,11 +38,11 @@ ttt=(td, only_this_index=-1,stack_depth=0) => {
 				})
 			;
 		// Set up canvas width and height
-		e.width = d[i++];
-		e.height = d[i++];
+		let W = e.width = d[i++];
+		let H = e.height = d[i++];
 
 		// Fill with background color
-		fill_rect(0, 0, e.width, e.height, 0,0, d[i++]);
+		fill_rect(0, 0, W, H, 0,0, d[i++]);
 
 		// Perform all the steps for this texture
 		while (i < d.length) {
@@ -60,8 +55,8 @@ ttt=(td, only_this_index=-1,stack_depth=0) => {
 				// 1 - rectangle_multiple: start_x, start_y, width, height, 
 				//                         inc_x, inc_y, top, bottom, fill
 				(sx, sy, w, h, inc_x, inc_y, top, bottom, fill) => {
-					for (let x = sx; x < e.width; x += inc_x) {
-						for (let y = sy; y < e.height; y += inc_y) {
+					for (let x = sx; x < W; x += inc_x) {
+						for (let y = sy; y < H; y += inc_y) {
 							fill_rect(x, y, w, h, top, bottom, fill);
 						}
 					}
@@ -69,8 +64,8 @@ ttt=(td, only_this_index=-1,stack_depth=0) => {
 				
 				// 2 - random noise: color, size
 				(color, size) => {
-					for (let x = 0; x < e.width; x += size) {
-						for (let y = 0; y < e.height; y += size) {
+					for (let x = 0; x < W; x += size) {
+						for (let y = 0; y < H; y += size) {
 							// Take the color value (first 3 nibbles) and 
 							// randomize the alpha value (last nibble)
 							// between 0 and the input alpha.
